@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "241062004298",
+    "firebase_url": "https://dfence-4f84b.firebaseio.com",
+    "project_id": "dfence-4f84b",
+    "storage_bucket": "dfence-4f84b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:241062004298:android:0a9a10d8959014f8",
+        "android_client_info": {
+          "package_name": "uniosun.geofence"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "241062004298-q6enit0gnre1ndmdotui4q45t127csel.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "uniosun.geofence",
+            "certificate_hash": "27736660C7DE003E9985E9E7E90AE548F2B6A1BB"
+          }
+        },
+        {
+          "client_id": "241062004298-jsd9gi8cssct9g549dhvl4v0acabdncm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4d0ZbLaTgLltTyWgzQWILPPkqIQuH8X4"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "241062004298-jsd9gi8cssct9g549dhvl4v0acabdncm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

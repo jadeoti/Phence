@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="5dp">
+
+    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="5dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginTop="16dp"
+            android:hint="Description"
+            android:lines="2"
+            android:textAppearance="@style/Base.TextAppearance.AppCompat.Title" />
+
+        <ImageView
+            android:id="@+id/markerIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/title"
+            android:layout_marginBottom="5dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginTop="5dp"
+            android:inputType="numberDecimal"
+            android:maxLines="1"
+            android:src="@drawable/ic_place_white_24dp"
+            android:tint="@color/colorPrimary" />
+
+        <TextView
+            android:id="@+id/coordinate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignLeft="@+id/markerIcon"
+            android:layout_alignStart="@+id/markerIcon"
+            android:layout_alignTop="@+id/markerIcon"
+            android:layout_marginLeft="29dp"
+            android:hint="(%d, %d)"
+            android:inputType="numberDecimal"
+            android:maxLines="1"
+            android:scrollHorizontally="false" />
+
+
+        <ImageView
+            android:id="@+id/radiusIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/markerIcon"
+            android:layout_marginBottom="5dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginTop="5dp"
+            android:inputType="numberDecimal"
+            android:maxLines="1"
+            android:src="@drawable/ic_keyboard_tab_white_24dp"
+            android:tint="@color/colorPrimary" />
+
+        <TextView
+            android:id="@+id/radius"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignLeft="@+id/radiusIcon"
+            android:layout_alignStart="@+id/radiusIcon"
+            android:layout_alignTop="@+id/radiusIcon"
+            android:layout_marginLeft="29dp"
+            android:hint="(%s)"
+            android:maxLines="1"
+            android:scrollHorizontally="false" />
+
+        <android.support.v7.widget.SwitchCompat
+            android:id="@+id/toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/radiusIcon"
+            android:text="" />
+
+    </RelativeLayout>
+</android.support.v7.widget.CardView>

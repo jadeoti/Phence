@@ -1,0 +1,62 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context=".ui.CreateGeofence">
+
+    <EditText
+        android:id="@+id/field_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginTop="16dp"
+        android:hint="Description"
+        android:lines="3" />
+
+    <EditText
+        android:id="@+id/field_latitude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/field_title"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginTop="5dp"
+        android:hint="Latitude"
+        android:inputType="numberDecimal"
+        android:maxLines="1"
+        android:scrollHorizontally="false" />
+
+    <EditText
+        android:id="@+id/field_longitude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/field_latitude"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginTop="5dp"
+        android:hint="Longitude"
+        android:inputType="numberDecimal"
+        android:maxLines="1"
+        android:scrollHorizontally="false" />
+
+    <EditText
+        android:id="@+id/field_radius"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/field_longitude"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginTop="5dp"
+        android:hint="Radius"
+        android:inputType="numberDecimal"
+        android:maxLines="1"
+        android:scrollHorizontally="false" />
+
+</RelativeLayout>
