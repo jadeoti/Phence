@@ -3,6 +3,7 @@ package uniosun.geofence.viewholder;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SwitchCompat;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import uniosun.geofence.R;
@@ -14,6 +15,7 @@ public class GeofenceViewHolder extends RecyclerView.ViewHolder {
     public TextView coordinateView;
     public TextView radiusView;
     public SwitchCompat switchView;
+    public ImageView editView;
 
     public GeofenceViewHolder(View itemView) {
         super(itemView);
@@ -21,7 +23,8 @@ public class GeofenceViewHolder extends RecyclerView.ViewHolder {
         titleView = (TextView) itemView.findViewById(R.id.title);
         coordinateView = (TextView) itemView.findViewById(R.id.coordinate);
         radiusView = (TextView) itemView.findViewById(R.id.radius);
-        switchView = (SwitchCompat) itemView.findViewById(R.id.toggle);
+        switchView = (SwitchCompat) itemView.findViewById(R.id.switchCompat);
+        editView = (ImageView) itemView.findViewById(R.id.edit_geofence);
     }
 
     public void bindToFence(SimpleGeofence simpleGeofence, View.OnClickListener switchClickListener) {
@@ -32,5 +35,6 @@ public class GeofenceViewHolder extends RecyclerView.ViewHolder {
         switchView.setChecked(simpleGeofence.isEnabled());
 
         switchView.setOnClickListener(switchClickListener);
+        editView.setOnClickListener(switchClickListener);
     }
 }

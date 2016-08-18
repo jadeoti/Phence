@@ -1,5 +1,6 @@
 package uniosun.geofence.ui.fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
@@ -21,6 +22,8 @@ import com.google.firebase.database.Transaction;
 
 import uniosun.geofence.R;
 import uniosun.geofence.model.SimpleGeofence;
+import uniosun.geofence.model.SimplePoint;
+import uniosun.geofence.ui.CreateGeofenceActivity;
 import uniosun.geofence.viewholder.GeofenceViewHolder;
 
 public abstract class GeofenceListFragment extends Fragment {
@@ -92,13 +95,21 @@ public abstract class GeofenceListFragment extends Fragment {
                 viewHolder.bindToFence(model, new View.OnClickListener() {
                     @Override
                     public void onClick(View starView) {
-                        // Need to write to both places the post is stored
-                        DatabaseReference globalFencesRef = mDatabase.child("geofences").child(postRef.getKey());
-                        //DatabaseReference userPostRef = mDatabase.child("user-posts").child(model.uid).child(postRef.getKey());
+                        if (starView.getId() == R.id.switchCompat) {
+                            // Need to write to both places the post is stored
+                            DatabaseReference globalFencesRef = mDatabase.child("geofences").child(postRef.getKey());
+                            //DatabaseReference userPostRef = mDatabase.child("user-posts").child(model.uid).child(postRef.getKey());
 
-                        // Run two transactions
-                        onStarClicked(globalFencesRef);
-                        //onStarClicked(userPostRef);
+                            // Run two transactions
+                            onStarClicked(globalFencesRef);
+                            //onStarClicked(userPostRef);
+                        } else if (starView.getId() == R.id.edit_geofence) {
+                            // get data from geofence
+                            Log.d(TAG, "Editing geofence " + model.toString());
+                            onEditClicked(model, postKey);
+
+                        }
+
                     }
                 });
             }
@@ -139,6 +150,26 @@ public abstract class GeofenceListFragment extends Fragment {
         });
     }
     // [END end_transaction_toggle_geofence]
+
+
+    // [START start_copy_geofence]
+    private void onEditClicked(SimpleGeofence simpleGeofence, String key) {
+
+        SimplePoint point = new SimplePoint();//null;//getLocationDetail();
+        point.setDescription(simpleGeofence.getDescription());
+        point.setLatitude(simpleGeofence.getLatitude());
+        point.setLongitude(simpleGeofence.getLongitude());
+        point.setRadius(simpleGeofence.getRadius());
+        point.setId(key);
+
+
+        Intent intent = new Intent(getActivity(), CreateGeofenceActivity.class);
+        Bundle extras = new Bundle();
+        extras.putSerializable(CreateGeofenceActivity.POINT_DETAILS, point);
+        intent.putExtras(extras);
+        startActivity(intent);
+    }
+    // [END end_geofence]
 
     @Override
     public void onDestroy() {

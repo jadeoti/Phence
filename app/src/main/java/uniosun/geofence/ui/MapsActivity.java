@@ -1,17 +1,30 @@
 package uniosun.geofence.ui;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.annotation.TargetApi;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextSwitcher;
+import android.widget.TextView;
+import android.widget.ViewSwitcher;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -26,6 +39,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -38,6 +52,8 @@ import com.google.firebase.database.GenericTypeIndicator;
 import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -45,7 +61,9 @@ import java.util.List;
 
 import uniosun.geofence.R;
 import uniosun.geofence.model.SimpleGeofence;
+import uniosun.geofence.model.SimplePoint;
 import uniosun.geofence.services.GeofenceTransitionsIntentService;
+import uniosun.geofence.util.Utilities;
 
 import static uniosun.geofence.Constants.CONNECTION_FAILURE_RESOLUTION_REQUEST;
 
@@ -55,26 +73,55 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
     private static final String TAG = MapsActivity.class.getSimpleName();
     private static final int CONST_GEOFENCE_REQUEST = 0x01;
     private static final int CONST_LOCATION_REQUEST = 0x02;
+    /*Handler to manage map camera changes*/
+    private static final int MESSAGE_CAMERA_UPDATE = 0x1;
+    private static final int MESSAGE_NO_INTERNET = 0x2;
+    private static final long QUERY_UPDATE_DELAY_MILLIS = 2000;
     // Internal List of Geofence objects. In a real app, these might be provided by an API based on
     // locations within the user's proximity.
     List<Geofence> mGeofenceList;
+    // [END define_database_reference]
     List<SimpleGeofence> mSimpleGeofences;
     private GoogleMap mMap;
     // [START define_database_reference]
     private DatabaseReference mDatabase;
-    // [END define_database_reference]
-
     // Stores the PendingIntent used to request geofence monitoring.
     private PendingIntent mGeofenceRequestIntent;
     private GoogleApiClient mApiClient;
-
     private Location mCurrentLocation;
+    private View mCenterMarkerLayout;
+    /*Progressbar and marker to indicate on camera update at bottom bar*/
+    private ProgressBar mCameraFocusProgressBar;
 
+    //private InteractionListener mListener;
+    private View mCameraFocusImage;
+    /*Text view to hold map focus*/
+    private TextSwitcher mCameraFocusTextSwitcher;
+    private Location mMapCenter;
+    private String mCenterDescription;
+    private LocationSearchHandler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
+
+        mCameraFocusProgressBar = (ProgressBar) findViewById(R.id.mapFocusProgress);
+        mCameraFocusImage = findViewById(R.id.mapFocusImage);
+        mCenterMarkerLayout = findViewById(R.id.center_marker_layout);
+
+
+        mCameraFocusTextSwitcher = (TextSwitcher) findViewById(R.id.camera_focus_switcher);
+        mCameraFocusTextSwitcher.setFactory(new ViewSwitcher.ViewFactory() {
+            @Override
+            public View makeView() {
+                TextView t = new TextView(MapsActivity.this);
+                return t;
+            }
+        });
+
+        mHandler = new LocationSearchHandler(this);
 
         // [START initialize_database_ref]
         mDatabase = FirebaseDatabase.getInstance().getReference();
@@ -108,7 +155,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
         mGeofenceList = new ArrayList<>();
     }
 
-
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
@@ -124,6 +170,14 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
         mMap.setBuildingsEnabled(true);
         UiSettings uiSettings = mMap.getUiSettings();
         uiSettings.setMyLocationButtonEnabled(true);
+        mMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
+            @Override
+            public void onCameraMoveStarted(int i) {
+                final CameraPosition cameraFocus = mMap.getCameraPosition();
+                requestCameraUpdate(cameraFocus);
+
+            }
+        });
 
         // Add a marker in current place and move the camera
         showMarker();
@@ -169,7 +223,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
 
 
     }
-
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
@@ -227,7 +280,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
             LocationServices.GeofencingApi.removeGeofences(mApiClient, mGeofenceRequestIntent);
         }*/
     }
-
 
     /**
      * Checks if Google Play services is available.
@@ -401,7 +453,12 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
     }
 
     public void addGeofence(View view) {
-        startActivity(new Intent(this, CreateGeofence.class));
+        SimplePoint point = getLocationDetail();
+        Intent intent = new Intent(this, CreateGeofenceActivity.class);
+        Bundle extras = new Bundle();
+        extras.putSerializable(CreateGeofenceActivity.POINT_DETAILS, point);
+        intent.putExtras(extras);
+        startActivity(intent);
     }
 
     @Override
@@ -421,5 +478,142 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
         mApiClient.disconnect();
     }
 
+    private void requestCameraUpdate(CameraPosition cameraPosition) {
+        if (mMap == null) return;
+        showProgress(true);
+        mHandler.removeMessages(MESSAGE_CAMERA_UPDATE);
+        if (!Utilities.isOnline(this)) {
+            mHandler.sendMessageDelayed(Message.obtain(mHandler, MESSAGE_NO_INTERNET, null),
+                    QUERY_UPDATE_DELAY_MILLIS);
+        } else {
+            mHandler.sendMessageDelayed(Message.obtain(mHandler, MESSAGE_CAMERA_UPDATE, cameraPosition),
+                    QUERY_UPDATE_DELAY_MILLIS);
+        }
+    }
+
+    private void notifyInternetError() {
+        showProgress(false);
+        mCameraFocusTextSwitcher.setText(getString(R.string.no_internet));
+    }
+
+    private void getAddress(CameraPosition cameraPosition) {
+        mMapCenter = new Location(LocationManager.GPS_PROVIDER);
+        // set map center
+        mMapCenter.setLatitude(cameraPosition.target.latitude);
+        mMapCenter.setLongitude(cameraPosition.target.longitude);
+        try {
+            List<Address> addresses = new Geocoder(this)
+                    .getFromLocation(cameraPosition.target.latitude,
+                            cameraPosition.target.longitude, 1);
+            if (!addresses.isEmpty()) {
+                //mMapFocusView.setText(addresses.get(0).getAddressLine(0));
+                mCenterDescription = addresses.get(0).getAddressLine(0);
+                mCameraFocusTextSwitcher.setText(mCenterDescription);
+                showProgress(false);
+
+            } else {
+                mCameraFocusTextSwitcher.setText(getString(R.string.loading));
+                showProgress(false);
+            }
+
+        } catch (IOException | NullPointerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Shows the progress UI.
+     */
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
+    private void showProgress(final boolean show) {
+        // On Honeycomb MR2 we have the ViewPropertyAnimator APIs, which allow
+        // for very easy animations. If available, use these APIs to fade-in
+        // the progress spinner.
+        // do donut animation
+
+        if (mMap == null) return;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+            int shortAnimTime = getResources().getInteger(
+                    android.R.integer.config_shortAnimTime);
+
+            mCameraFocusProgressBar.setVisibility(View.VISIBLE);
+            mCameraFocusProgressBar.animate().setDuration(shortAnimTime)
+                    .alpha(show ? 1 : 0)
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            mCameraFocusProgressBar.setVisibility(show ? View.VISIBLE
+                                    : View.GONE);
+                        }
+                    });
+
+            mCameraFocusImage.setVisibility(View.VISIBLE);
+            mCameraFocusImage.animate().setDuration(shortAnimTime)
+                    .alpha(show ? 0 : 1)
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            mCameraFocusImage.setVisibility(show ? View.GONE
+                                    : View.VISIBLE);
+                        }
+                    });
+
+            mCenterMarkerLayout.setVisibility(View.VISIBLE);
+            mCenterMarkerLayout.animate().setDuration(shortAnimTime)
+                    .alpha(show ? 1 : 0)
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            mCenterMarkerLayout.setVisibility(show ? View.VISIBLE
+                                    : View.GONE);
+                        }
+                    });
+
+
+        } else {
+            // The ViewPropertyAnimator APIs are not available, so simply show
+            // and hide the relevant UI components.
+            mCameraFocusProgressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+            mCameraFocusImage.setVisibility(show ? View.GONE : View.VISIBLE);
+        }
+
+    }
+
+    private SimplePoint getLocationDetail() {
+        SimplePoint point = new SimplePoint();
+        point.setLatitude(mMapCenter.getLatitude());
+        point.setLongitude(mMapCenter.getLongitude());
+        point.setDescription(mCenterDescription);
+        return point;
+    }
+
+    /**
+     * {@code Handler} that sends search queries to the Home.
+     */
+    private static class LocationSearchHandler extends Handler {
+
+        public static final int MESSAGE_QUERY_UPDATE = 1;
+
+        private final WeakReference<MapsActivity> mFragmentReference;
+
+        LocationSearchHandler(MapsActivity activity) {
+            mFragmentReference = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            MapsActivity instance = mFragmentReference.get();
+            if (instance != null) {
+                if (msg.what == MESSAGE_CAMERA_UPDATE) {
+                    CameraPosition cameraPosition = (CameraPosition) msg.obj;
+                    instance.getAddress(cameraPosition);
+                } else if (msg.what == MESSAGE_NO_INTERNET) {
+                    instance.notifyInternetError();
+                }
+            }
+        }
+
+    }
 
 }

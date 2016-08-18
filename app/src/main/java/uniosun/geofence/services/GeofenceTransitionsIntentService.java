@@ -26,17 +26,40 @@ import android.graphics.Color;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
-import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingEvent;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.GenericTypeIndicator;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
+import com.google.gson.JsonObject;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import retrofit2.Call;
+import timber.log.Timber;
+import uniosun.geofence.Config;
 import uniosun.geofence.GeofenceErrorMessages;
 import uniosun.geofence.R;
+import uniosun.geofence.model.Activity;
+import uniosun.geofence.model.User;
+import uniosun.geofence.network.GeofenceClient;
+import uniosun.geofence.network.WebService;
 import uniosun.geofence.ui.MapsActivity;
+
+import static uniosun.geofence.util.Utilities.getUid;
 
 /*import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.Wearable;*/
@@ -52,6 +75,19 @@ public class GeofenceTransitionsIntentService extends IntentService {
 
     protected static final String TAG = "geofence-transitions-service";
 
+    // [START webservice_reference]
+    private WebService mWebService;
+    // [END webservice_reference]
+
+
+    // [START define_database_reference]
+    private DatabaseReference mDatabase;
+    // [END define_database_reference]
+
+    private String adminPhone;
+
+    private String mTransitionDetails;
+
     /**
      * This constructor is required, and calls the super IntentService(String)
      * constructor with the name for a worker thread.
@@ -64,6 +100,13 @@ public class GeofenceTransitionsIntentService extends IntentService {
     @Override
     public void onCreate() {
         super.onCreate();
+        mWebService = new GeofenceClient().getService();
+        // [START initialize_database_ref]
+        mDatabase = FirebaseDatabase.getInstance().getReference();
+        // [END initialize_database_ref]
+
+        getAdmins(mDatabase);
+
     }
 
     /**
@@ -78,7 +121,7 @@ public class GeofenceTransitionsIntentService extends IntentService {
         if (geofencingEvent.hasError()) {
             String errorMessage = GeofenceErrorMessages.getErrorString(this,
                     geofencingEvent.getErrorCode());
-            Log.e(TAG, errorMessage);
+            Timber.e(errorMessage);
             return;
         }
 
@@ -94,18 +137,26 @@ public class GeofenceTransitionsIntentService extends IntentService {
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
 
             // Get the transition details as a String.
-            String geofenceTransitionDetails = getGeofenceTransitionDetails(
+            mTransitionDetails = getGeofenceTransitionDetails(
                     this,
                     geofenceTransition,
                     triggeringGeofences
             );
 
             // Send notification and log the transition details.
-            sendNotification(geofenceTransitionDetails);
-            Log.i(TAG, geofenceTransitionDetails);
+            sendNotification(mTransitionDetails);
+
+            // Send activity log
+            submitActivityLog(mTransitionDetails);
+
+            // send sms
+            sendMessage(mTransitionDetails);
+
+            Timber.i(mTransitionDetails);
         } else {
             // Log the error.
-            Log.e(TAG, getString(R.string.geofence_transition_invalid_type, geofenceTransition));
+            Timber.e(getString(R.string.geofence_transition_invalid_type, geofenceTransition));
+            submitActivityLog(getString(R.string.geofence_transition_invalid_type, geofenceTransition));
         }
     }
 
@@ -159,7 +210,7 @@ public class GeofenceTransitionsIntentService extends IntentService {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
 
         // Define the notification settings.
-        builder.setSmallIcon(R.mipmap.ic_launcher)
+        builder.setSmallIcon(R.drawable.ic_notification_icon)
                 // In a real app, you may want to use a library like Volley
                 // to decode the Bitmap.
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(),
@@ -198,5 +249,150 @@ public class GeofenceTransitionsIntentService extends IntentService {
                 return getString(R.string.unknown_geofence_transition);
         }
     }
+
+    private void sendMessage(String message) {
+        Call<JsonObject> smsCall = mWebService.sendSms(Config.SMS_API_KEY,
+                "Geofence Project", message, adminPhone);
+        try {
+            smsCall.execute();
+        } catch (IOException e) {
+            submitActivityLog(e.getMessage());
+        }
+    }
+
+
+    private void getAdmins(DatabaseReference databaseReference) {
+        Query query = databaseReference.child("users");
+        query.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.getValue() == null) return;
+                Timber.d("singlevalueondatachange: %s", dataSnapshot.getValue().toString());
+
+                GenericTypeIndicator<HashMap<String, User>> typeIndicator =
+                        new GenericTypeIndicator<HashMap<String, User>>() {
+                        };
+
+                Collection<User> userCollection = dataSnapshot.getValue(typeIndicator).values();
+
+                ArrayList<User> users = new ArrayList<>(userCollection);
+
+                ArrayList<String> adminPhones = new ArrayList<String>();
+                for (User user : users) {
+                    if (user.isAdmin) {
+                        adminPhones.add(user.phone);
+                    }
+                }
+                if (adminPhones.size() >= 1) {
+                    adminPhone = TextUtils.join(",", adminPhones);
+                    //adminPhone = adminPhones.get(0);
+                }
+
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+        query.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                /*Map<String, SimpleGeofence> td = (HashMap<String,SimpleGeofence>) dataSnapshot.getValue();
+                onGeofenceAvailable(td);*/
+                //Log.d(TAG, "childadded:" + dataSnapshot.getValue().getClass());
+
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+        query.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+
+                //Log.d(TAG, "ondatachange:" + dataSnapshot.getValue().getClass());
+
+                //Map<String, SimpleGeofence> td = (HashMap<String,SimpleGeofence>) dataSnapshot.getValue();
+                //onGeofenceAvailable(td);
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void submitActivityLog(final String details) {
+
+        // [START single_value_read]
+        final String userId = getUid();
+        mDatabase.child("users").child(userId).addListenerForSingleValueEvent(
+                new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        // Get user value
+                        User user = dataSnapshot.getValue(User.class);
+
+                        // [START_EXCLUDE]
+                        if (user == null) {
+                            // User is null, error out
+                            Timber.e("User %s is unexpectedly null", userId);
+                            Toast.makeText(GeofenceTransitionsIntentService.this,
+                                    "Error: could not fetch user.",
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            // Write new user activity
+                            writeNewPost(userId, user.username, details);
+                        }
+
+                        // Finish this Activity, back to the stream
+                        // [END_EXCLUDE]
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                        Timber.w("getUser:onCancelled %s", databaseError.toException());
+                    }
+                });
+        // [END single_value_read]
+    }
+
+    // [START write_fan_out]
+    private void writeNewPost(String userId, String username, String body) {
+        // Create new post at /user-activities/$userid/$activity_id and at
+        // /activities/$activity_id simultaneously
+        String key = mDatabase.child("activities").push().getKey();
+        long time = System.currentTimeMillis();
+        Activity post = new Activity(userId, username, new Date(time).toString(), body);
+        Map<String, Object> postValues = post.toMap();
+
+        Map<String, Object> childUpdates = new HashMap<>();
+        childUpdates.put("/activities/" + key, postValues);
+        childUpdates.put("/user-activities/" + userId + "/" + key, postValues);
+
+        mDatabase.updateChildren(childUpdates);
+    }
+    // [END write_fan_out]
 }
 

@@ -19,16 +19,24 @@ import java.util.Map;
 
 import uniosun.geofence.R;
 import uniosun.geofence.model.SimpleGeofence;
+import uniosun.geofence.model.SimplePoint;
 import uniosun.geofence.util.Utilities;
 
-public class CreateGeofence extends BaseActivity {
+public class CreateGeofenceActivity extends BaseActivity {
 
-    private static final String TAG = "CreateGeofence";
+    public static final String POINT_DETAILS = "uniosun.geofence.ui.CGA";
+    public static final String EDITING = "uniosun.geofence.ui.EDITING";
+    private static final String TAG = "CreateGeofenceActivity";
     private static final String REQUIRED = "Required";
 
     // [START declare_database_ref]
     private DatabaseReference mDatabase;
     // [END declare_database_ref]
+
+    // point description from map
+    private SimplePoint mSimplePoint;
+
+    private boolean mIsEditing;
 
     private EditText mTitleField, mLongitudeField, mLatitudeField, mRadiusField;
 
@@ -36,6 +44,7 @@ public class CreateGeofence extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_geofence);
+
 
         // [START initialize_database_ref]
         mDatabase = FirebaseDatabase.getInstance().getReference();
@@ -52,6 +61,29 @@ public class CreateGeofence extends BaseActivity {
                 submitPost();
             }
         });
+
+        tryFillPage();
+    }
+
+    private void tryFillPage() {
+        if (getIntent().getExtras() != null) {
+            Bundle extras = getIntent().getExtras();
+            if (extras.containsKey(POINT_DETAILS)) {
+                mSimplePoint = (SimplePoint) extras.getSerializable(POINT_DETAILS);
+                if (mSimplePoint != null) {
+                    // fill points
+                    mTitleField.setText(mSimplePoint.getDescription());
+                    mLongitudeField.setText(Double.toString(mSimplePoint.getLongitude()));
+                    mLatitudeField.setText(Double.toString(mSimplePoint.getLatitude()));
+                    mRadiusField.setText(Double.toString(mSimplePoint.getRadius()));
+                }
+
+            }
+
+            if (extras.containsKey(EDITING)) {
+                mIsEditing = extras.getBoolean(EDITING, false);
+            }
+        }
     }
 
     private void submitPost() {
@@ -98,51 +130,14 @@ public class CreateGeofence extends BaseActivity {
                 title,
                 true
         );
-        writeNewGeoFence(simpleGeofence);
-
-       /* // [START single_value_read]
-        //final String userId = getUid();
-        mDatabase.child("users").child(userId).addListenerForSingleValueEvent(
-                new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        // Get user value
-                        User user = dataSnapshot.getValue(User.class);
-
-                        // [START_EXCLUDE]
-                        if (user == null) {
-                            // User is null, error out
-                            Log.e(TAG, "User " + userId + " is unexpectedly null");
-                            Toast.makeText(CreateGeofence.this,
-                                    "Error: could not fetch user.",
-                                    Toast.LENGTH_SHORT).show();
-                        } else {
-                            // Write new post
-                           SimpleGeofence simpleGeofence = new SimpleGeofence(
-                                    YERBA_BUENA_ID,                // geofenceId.
-                                    YERBA_BUENA_LATITUDE,
-                                    YERBA_BUENA_LONGITUDE,
-                                    YERBA_BUENA_RADIUS_METERS,
-                                    GEOFENCE_EXPIRATION_TIME,
-                                    Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT | Geofence.GEOFENCE_TRANSITION_DWELL
-                            );
-                            writeNewGeoFence(userId, user.username, title, simpleGeofence);
-                        }
-
-                        // Finish this Activity, back to the stream
-                        finish();
-                        // [END_EXCLUDE]
-                    }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        Log.w(TAG, "getUser:onCancelled", databaseError.toException());
-                    }
-                });
-        // [END single_value_read]*/
+        if (!mIsEditing) {
+            writeNewGeoFence(simpleGeofence);
+        } else {
+            updateFence(mSimplePoint.getId(), simpleGeofence);
+        }
     }
 
-    // [START write_fan_out]
+    // [START write_new_fence]
     private void writeNewGeoFence(SimpleGeofence simpleGeofence) {
         // Create new post at /user-posts/$userid/$postid and at
         // /posts/$postid simultaneously
@@ -153,8 +148,10 @@ public class CreateGeofence extends BaseActivity {
                 .addOnSuccessListener(this, new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        clearFields();
-                        Toast.makeText(CreateGeofence.this, "Successfully added", Toast.LENGTH_SHORT).show();
+
+                        Toast.makeText(CreateGeofenceActivity.this, "Successfully added", Toast.LENGTH_SHORT).show();
+                        //clearFields();
+                        finish();
                     }
                 }).addOnFailureListener(new OnFailureListener() {
             @Override
@@ -163,7 +160,30 @@ public class CreateGeofence extends BaseActivity {
             }
         });
     }
-    // [END write_fan_out]
+    // [END write_new_fence]
+
+    // [START update_fence]
+    private void updateFence(String fenceId, SimpleGeofence simpleGeofence) {
+        Map<String, Object> geofenceValues = simpleGeofence.toMap();
+
+
+        mDatabase.child("geofences").child(fenceId).setValue(geofenceValues)
+                .addOnSuccessListener(this, new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+
+                        Toast.makeText(CreateGeofenceActivity.this, "Successfully edited", Toast.LENGTH_SHORT).show();
+                        //clearFields();
+                        finish();
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                Log.d(TAG, e.getCause().getMessage());
+            }
+        });
+    }
+    // [END update_fence]
 
     private void clearFields() {
         mTitleField.setText(null);

@@ -4,6 +4,8 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
+import com.google.firebase.auth.FirebaseAuth;
+
 /**
  * Created by Morph-Deji on 6/27/2016.
  */
@@ -17,5 +19,10 @@ public class Utilities {
         boolean isConnected = activeNetwork != null &&
                 activeNetwork.isConnectedOrConnecting();
         return isConnected;
+    }
+
+
+    public static String getUid() {
+        return FirebaseAuth.getInstance().getCurrentUser().getUid();
     }
 }

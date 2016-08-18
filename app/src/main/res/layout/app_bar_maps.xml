@@ -23,6 +23,68 @@
 
     <include layout="@layout/content_maps" />
 
+    <ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/center_marker_layout"
+        android:layout_width="33dp"
+        android:layout_height="39dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_add_location_white_24dp"
+        android:tint="@color/colorAccent"
+        android:visibility="gone" />
+
+    <android.support.v7.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_alignParentBottom="true"
+        android:layout_gravity="bottom|end|start"
+        android:layout_marginBottom="24dp"
+        android:layout_marginLeft="@dimen/spacing_major"
+        android:layout_marginRight="80dp"
+        android:visibility="visible"
+        app:cardBackgroundColor="@color/my_grey_hound">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <ProgressBar
+                    android:id="@+id/mapFocusProgress"
+                    style="?android:attr/indeterminateProgressStyle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:indeterminateOnly="true"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/mapFocusImage"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_add_location_white_24dp"
+                    android:tint="?attr/colorAccent"
+                    android:visibility="visible" />
+
+            </FrameLayout>
+
+
+            <TextSwitcher
+                android:id="@+id/camera_focus_switcher"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:layout_marginRight="8dp"
+                android:inAnimation="@android:anim/fade_in"
+                android:outAnimation="@android:anim/fade_out" />
+
+
+        </LinearLayout>
+    </android.support.v7.widget.CardView>
+
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"

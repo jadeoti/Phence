@@ -130,14 +130,17 @@ public class BaseActivity extends AppCompatActivity implements NavigationView.On
             drawer.closeDrawer(GravityCompat.START);
             return true;
         }
+        //Handler handler = new Handler().
         if (id == R.id.nav_home) {
             createBackStack(new Intent(this, MapsActivity.class));
         } else if (id == R.id.nav_all) {
             createBackStack(new Intent(this, FencesActivity.class));
         } else if (id == R.id.nav_new) {
-            createBackStack(new Intent(this, CreateGeofence.class));
+            createBackStack(new Intent(this, CreateGeofenceActivity.class));
+        } else if (id == R.id.nav_logs) {
+            createBackStack(new Intent(this, LogsActivity.class));
         } else if (id == R.id.nav_about) {
-            //createBackStack(new Intent(this, CreateGeofence.class));
+            //createBackStack(new Intent(this, CreateGeofenceActivity.class));
         } else if (id == R.id.nav_logout) {
             FirebaseAuth.getInstance().signOut();
             finish();

@@ -10,6 +10,7 @@ public class User {
     public String email;
     public boolean isAdmin;
     public String screenName;
+    public String phone;
 
     public User() {
         // Default constructor required for calls to DataSnapshot.getValue(User.class)
@@ -20,6 +21,7 @@ public class User {
         this.email = email;
         this.isAdmin = false;
         this.screenName = username;
+        this.phone = "080";
     }
 
 }
