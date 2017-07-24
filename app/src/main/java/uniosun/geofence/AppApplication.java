@@ -14,5 +14,6 @@ public class AppApplication extends Application {
     public void onCreate() {
         super.onCreate();
         Timber.plant(new Timber.DebugTree());
+        //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
     }
 }

@@ -119,6 +119,11 @@ public class CreateGeofenceActivity extends BaseActivity {
             return;
         }
 
+        if (Float.parseFloat(radius) <= 0.0f) {
+            mRadiusField.setError(REQUIRED);
+            return;
+        }
+
         // Write new post
         SimpleGeofence simpleGeofence = new SimpleGeofence(
                 "id",                // geofenceId.

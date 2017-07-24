@@ -33,6 +33,7 @@ import com.google.android.gms.location.GeofencingEvent;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.GenericTypeIndicator;
@@ -267,25 +268,30 @@ public class GeofenceTransitionsIntentService extends IntentService {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.getValue() == null) return;
-                Timber.d("singlevalueondatachange: %s", dataSnapshot.getValue().toString());
 
-                GenericTypeIndicator<HashMap<String, User>> typeIndicator =
-                        new GenericTypeIndicator<HashMap<String, User>>() {
-                        };
+                try {
+                    Timber.d("singlevalueondatachange: %s", dataSnapshot.getValue().toString());
 
-                Collection<User> userCollection = dataSnapshot.getValue(typeIndicator).values();
+                    GenericTypeIndicator<HashMap<String, User>> typeIndicator =
+                            new GenericTypeIndicator<HashMap<String, User>>() {
+                            };
 
-                ArrayList<User> users = new ArrayList<>(userCollection);
+                    Collection<User> userCollection = dataSnapshot.getValue(typeIndicator).values();
 
-                ArrayList<String> adminPhones = new ArrayList<String>();
-                for (User user : users) {
-                    if (user.isAdmin) {
-                        adminPhones.add(user.phone);
+                    ArrayList<User> users = new ArrayList<>(userCollection);
+
+                    ArrayList<String> adminPhones = new ArrayList<String>();
+                    for (User user : users) {
+                        if (user.isAdmin) {
+                            adminPhones.add(user.phone);
+                        }
                     }
-                }
-                if (adminPhones.size() >= 1) {
-                    adminPhone = TextUtils.join(",", adminPhones);
-                    //adminPhone = adminPhones.get(0);
+                    if (adminPhones.size() >= 1) {
+                        adminPhone = TextUtils.join(",", adminPhones);
+                        //adminPhone = adminPhones.get(0);
+                    }
+                } catch (DatabaseException e) {
+                    e.printStackTrace();
                 }
 
 

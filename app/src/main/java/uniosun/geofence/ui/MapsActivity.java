@@ -170,6 +170,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
         mMap.setBuildingsEnabled(true);
         UiSettings uiSettings = mMap.getUiSettings();
         uiSettings.setMyLocationButtonEnabled(true);
+
+
         mMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
             @Override
             public void onCameraMoveStarted(int i) {
@@ -218,6 +220,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
      */
     public void createGeofences(List<SimpleGeofence> simpleGeofenceList) {
         for (SimpleGeofence simpleGeofence : simpleGeofenceList) {
+            if (simpleGeofence.getRadius() <= 0.0f)
+                continue;
             mGeofenceList.add(simpleGeofence.toGeofence());
         }
 
